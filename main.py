@@ -262,6 +262,18 @@ def inverse_s(txt_like_num):
     return txt_like_num
 
 
+def get_blocks(text):
+    count_zeros_for_full_block = 32 - len(text) % 32
+    if count_zeros_for_full_block != 0 and count_zeros_for_full_block != 32:
+        for i in range(count_zeros_for_full_block):
+            text += '0'
+    text_list = []
+    for i in range(int(len(text) / 32)):
+        text_list.append(text[i * 32: i * 32 + 32])
+    return text_list
+
+
+
 def encrypt(text, keys):
     """
     Encrypting text
@@ -274,16 +286,10 @@ def encrypt(text, keys):
     """
     text = binascii.hexlify(text.encode('utf8')).decode('utf8')
 
-    count = 32 - len(text) % 32
-    if count != 0 and count != 32:
-        for i in range(count):
-            text += '0'
-    text_array = []
-    for i in range(int(len(text) / 32)):
-        text_array.append(text[i * 32: i * 32 + 32])
+    text_list = get_blocks(text)
 
     text_encrypt = []
-    for txt in text_array:
+    for txt in text_list:
         encrypted_text = txt
         for i in range(9):
             encrypted_text = l(s(x(encrypted_text, keys[i])))
@@ -307,7 +313,6 @@ def decrypt(text, keys):
         text_array.append(text[i*32:i*32+32])
 
     text_decrypt = []
-    text_decrypted = ""
     for i in range(len(text_array)):
         text_decrypted = text_array[i]
         for j in range(9, 0, -1):
@@ -320,8 +325,17 @@ def decrypt(text, keys):
     return binascii.unhexlify(''.join(text_decrypt)).decode('utf8')
 
 
+def get_amount_of_blocks(text):
+    """
+    :param text:
+    :type text: str
+    :return: amount of blocks in text
+    """
+    return int(len(text) / 32) + 1
+
 if __name__ == "__main__":
     text = "Тут находиться крайне секретный текст, который необходимо должным образом зашифровать"
+    print(get_amount_of_blocks(text))
     text.encode("utf-8")
     key = "PasswordПароль123321"
     key = generate_keys(key)
