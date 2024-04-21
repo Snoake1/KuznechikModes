@@ -3,3 +3,5 @@ Bot and pieces of code
 __pycache__
 venv
 output.txt
+input.txt
+key.txt

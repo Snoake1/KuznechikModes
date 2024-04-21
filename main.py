@@ -7,6 +7,8 @@ import binascii
 galua_params = (148, 32, 133, 16, 194, 192, 1, 251, 1, 192, 194, 16, 133, 32, 148, 1)
 galua_params_reverse = (1, 148, 32, 133, 16, 194, 192, 1, 251, 1, 192, 194, 16, 133, 32, 148)
 
+size_of_bock = 32
+
 # Таблица степеней двойки в полях Галуа
 galua_fields = (1, 2, 4, 8, 16, 32, 64, 128, 195, 69, 138, 215, 109, 218, 119, 238, 31, 62, 124, 248, 51, 102, 204, 91,
                 182, 175, 157, 249, 49, 98, 196, 75, 150, 239, 29, 58, 116, 232, 19, 38, 76, 152, 243, 37, 74, 148, 235,
@@ -58,14 +60,14 @@ def generate_keys(input_key: str):
     :return:
     """
     # convert to hex
-    my_key = binascii.hexlify(input_key.encode('utf8')).decode('utf8')
-    while len(my_key) <= 64:
-        my_key += my_key
-    my_key = my_key[:64]
+    secret_key = binascii.hexlify(input_key.encode('utf8')).decode('utf8')
+    while len(secret_key) <= 64:
+        secret_key += secret_key
+    secret_key = secret_key[:64]
 
     constants = []  # Константы
     f = []  # ячейки Фейстеля
-    keys = [my_key[:int(len(my_key) / 2)], my_key[int(len(my_key) / 2):]]
+    keys = [secret_key[:int(len(secret_key) / 2)], secret_key[int(len(secret_key) / 2):]]
 
     # Заполнение констант
     for i in range(32):
@@ -75,13 +77,13 @@ def generate_keys(input_key: str):
             constants.append(l_transform(hex(i + 1)[2:] + '000000000000000000000000000000').upper())
 
     # Формирование ячеек Фейстеля
-    f.append([keys[1], xor(l_transform(s(xor(my_key[0], constants[0]))), keys[1])])
+    f.append([keys[1], xor(l_transform(s_transform(xor(secret_key[0], constants[0]))), keys[1])])
     for i in range(32):
-        keys = [f[i][1], xor(l_transform(s(xor(f[i][0], constants[i]))), f[i][1])]
+        keys = [f[i][1], xor(l_transform(s_transform(xor(f[i][0], constants[i]))), f[i][1])]
         f.append(keys)
 
     # разбиение заданного ключа пополам
-    keys = [my_key[:int(len(my_key) / 2)], my_key[int(len(my_key) / 2):]]
+    keys = [secret_key[:int(len(secret_key) / 2)], secret_key[int(len(secret_key) / 2):]]
 
     # формирование новых ключей из ячеек Фейстеля
     for i in range(len(f)):
@@ -117,23 +119,23 @@ def convert_base(number, tobs=10, frombs=10):
         return convert_base(n // tobs, tobs) + alphabet[n % tobs]
 
 
-def xor(any_text: str, my_key: str, base=16):
+def xor(any_text1: str, any_text2: str, base=16):
     """
-    xor для двух шестнадцетиричных строк
-    :param any_text:
-    :type any_text: str
-    :param my_key:
-    :type my_key: str
+    xor для двух шестнадцатеричных строк
+    :param any_text1:
+    :type any_text1: str
+    :param any_text2:
+    :type any_text2: str
     :param base:
     :type base: int
     :return: 32-character long string
     :raise:  Append leading zeros, if amount symbols
             in result less than amount symbols in text
     """
-    text_in_base = int(any_text, base)
-    key_in_base = int(my_key, base)
-    result = hex(text_in_base ^ key_in_base)[2:].upper()  # переводим в 16-ричную систему счиления
-    result = (len(any_text) - len(result)) * '0' + result  # Добавление ведущих нулей
+    text1_in_base = int(any_text1, base)
+    text2_in_base = int(any_text2, base)
+    result = hex(text1_in_base ^ text2_in_base)[2:].upper()  # переводим в 16-ричную систему счисления
+    result = (len(any_text1) - len(result)) * '0' + result  # Добавление ведущих нулей
     return result
 
 
@@ -223,7 +225,7 @@ def inverse_l(num: str):
     return num.upper()
 
 
-def s(txt_like_num):
+def s_transform(txt_like_num):
     """
     nonlinear transformaton
     :param txt_like_num:
@@ -274,21 +276,21 @@ def encrypt(any_text, keys):
     """
     any_text = binascii.hexlify(any_text.encode('utf8')).decode('utf8')
 
-    count = 32 - len(any_text) % 32
-    if count != 0 and count != 32:
+    count = size_of_bock - len(any_text) % size_of_bock
+    if count != 0 and count != size_of_bock:
         for i in range(count):
             any_text += '0'
     text_array = []
-    for i in range(int(len(any_text) / 32)):
-        text_array.append(any_text[i * 32: i * 32 + 32])
+    for i in range(int(len(any_text) / size_of_bock)):
+        text_array.append(any_text[i * size_of_bock: i * size_of_bock + size_of_bock])
 
     text_encrypt = []
     for txt in text_array:
-        encrypted_text = txt
+        text_for_encrypt = txt
         for i in range(9):
-            encrypted_text = l_transform(s(xor(encrypted_text, keys[i])))
-        encrypted_text = xor(encrypted_text, keys[9])
-        text_encrypt.append(encrypted_text)
+            text_for_encrypt = l_transform(s_transform(xor(text_for_encrypt, keys[i])))
+        text_for_encrypt = xor(text_for_encrypt, keys[9])
+        text_encrypt.append(text_for_encrypt)
     return ''.join(text_encrypt)
 
 
@@ -302,8 +304,8 @@ def decrypt(any_text, keys):
     decrypted text
     """
     text_array = []
-    for i in range(int(len(any_text) / 32)):
-        text_array.append(any_text[i * 32:i * 32 + 32])
+    for i in range(int(len(any_text) / size_of_bock)):
+        text_array.append(any_text[i * size_of_bock:i * size_of_bock + size_of_bock])
 
     text_decrypt = []
     text_decrypted = ""
@@ -320,11 +322,13 @@ def decrypt(any_text, keys):
 
 
 if __name__ == "__main__":
-    text = "Тут находиться крайне секретный текст, который необходимо должным образом зашифровать"
+    with open('input.txt') as input_file:
+        text = input_file.read()
     text.encode("utf-8")
-    key = "PasswordПароль123321"
+    with open('key.txt') as key_file:
+        key = key_file.read()
     key = generate_keys(key)
     encrypted_text = encrypt(text, key)
-    print(encrypted_text)
     decrypted_text = decrypt(encrypted_text, key)
-    print(decrypted_text)
+    with open('output.txt', 'w') as out_file:
+        out_file.write(decrypted_text)
