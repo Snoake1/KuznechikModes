@@ -1,4 +1,5 @@
 import binascii
+import time
 
 from main import l, s, x, generate_keys, get_blocks
 
@@ -37,18 +38,24 @@ def decrypt(encrypted_text, keys, sync_message):
         text_array.append(text[i * 32: i * 32 + 32])
 
     blocks = get_blocks(encrypted_text)
-    CTRS = get_CTRS(sync_message, len(blocks), keys) #TODO
+    CTRS = get_CTRS(sync_message, len(blocks), keys)
 
     decrypted_text = []
     for i, txt in enumerate(blocks):
-        decrypted_text.append(x(txt, CTRS[i]))
-    return "".join(decrypted_text)
+        decrypted_text.append(x(txt, CTRS[i]).lower())
+    return binascii.unhexlify("".join(decrypted_text)).decode('utf8')
 
 
 if __name__ == "__main__":
     sync_message = "lovecryptography"
-    text = "Тут находиться крайне секретный текст, который необходимо должным образом зашифровать"
+    with open("input3x.txt", encoding="utf-8", mode='r') as file:
+        text = file.readlines()
+    text = ''.join(text)
+    text.encode("utf-8")
     text = binascii.hexlify(text.encode("utf8")).decode("utf8")
     keys = generate_keys("СекретныйПароль")
+    start = time.time()
     encrypted_text = encrypt(text, keys, sync_message)
     decrypt(encrypted_text, keys, sync_message)
+    end = time.time()
+    print(end - start)

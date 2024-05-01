@@ -260,7 +260,7 @@ def inverse_s(txt_like_num):
     return txt_like_num
 
 
-def get_blocks(text):
+def get_blocks(text) -> list[str]:
     count_zeros_for_full_block = 32 - len(text) % 32
     if count_zeros_for_full_block != 0 and count_zeros_for_full_block != 32:
         for i in range(count_zeros_for_full_block):
@@ -272,7 +272,7 @@ def get_blocks(text):
 
 
 
-def encrypt(text, keys):
+def encrypt(text, keys, IV):
     """
     Encrypting text
     :param text:
@@ -283,20 +283,25 @@ def encrypt(text, keys):
     encrypted_text
     """
     text = binascii.hexlify(text.encode('utf8')).decode('utf8')
-
     text_list = get_blocks(text)
-
     text_encrypt = []
+    R = binascii.hexlify(IV.encode('utf8')).decode('utf8')
     for txt in text_list:
+        n = R[:32]
+        ms = R[32:48]
         encrypted_text = txt
         for i in range(9):
-            encrypted_text = l(s(x(encrypted_text, keys[i])))
-        encrypted_text = x(encrypted_text, keys[9])
+            gamma = l(s(x(n, keys[i])))
+        gamma = x(gamma, keys[9])
+        encrypted_text = x(gamma[:16], encrypted_text)
         text_encrypt.append(encrypted_text)
+        R = ms + encrypted_text[:16]
+        R = R[:64]
     return ''.join(text_encrypt)
 
 
-def decrypt(text, keys):
+def decrypt(text, keys, IV):
+    # todo
     """
     Decrypting text
     :param text:
@@ -310,12 +315,20 @@ def decrypt(text, keys):
     for i in range(int(len(text) / 32)):
         text_array.append(text[i*32:i*32+32])
 
+    R = binascii.hexlify(IV.encode('utf8')).decode('utf8')
+
     text_decrypt = []
     for i in range(len(text_array)):
+        n = R[:32]
+        ms = R[32:48]
         text_decrypted = text_array[i]
-        for j in range(9, 0, -1):
-            text_decrypted = inverse_s(inverse_l(x(text_decrypted, keys[j])))
-        text_decrypted = x(text_decrypted, keys[0])
+        ci = text_array[i]
+        for j in range(9):
+            gamma = l(s(x(n, keys[j])))
+        gamma = x(gamma, keys[9])
+        text_decrypted = x(text_decrypted, gamma[:16])
+        R = ms + ci[:16]
+        R = R[:64]
         if i == len(text_array) - 1:
             while text_decrypted[-1] == '0':
                 text_decrypted = text_decrypted[:-1]
@@ -331,15 +344,19 @@ def get_amount_of_blocks(text):
     """
     return int(len(text) / 32) + 1
 
+
 if __name__ == "__main__":
-    with open("input2x.txt", encoding="utf-8", mode='r') as file:
+    IV = "ilovecryptography123321300871233ilovecryptography123321309971233"
+    with open("input4x.txt", encoding="utf-8", mode='r') as file:
         text = file.readlines()
     text = ''.join(text)
+    text.encode("utf-8")
+    #print(get_amount_of_blocks(text))
     text.encode("utf-8")
     key = "PasswordПароль123321"
     key = generate_keys(key)
     start = time.time()
-    encrypted_text = encrypt(text, key)
-    decrypted_text = decrypt(encrypted_text, key)
+    encrypted_text = encrypt(text, key, IV)
+    decrypted_text = decrypt(encrypted_text, key, IV)
     end = time.time()
-    print(end - start)
+    print(end-start)
